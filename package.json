@@ -1,0 +1,15 @@
+{
+  "name": "tecendil-backend",
+  "version": "0.1.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.16.0",
+    "xmldoc": "^1.0.0"
+  },
+  "engines": {
+    "node": "8.1.4"
+  }
+}
