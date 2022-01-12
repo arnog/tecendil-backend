@@ -1,5 +1,5 @@
 {
   "name": "Tengwar",
-  "description": "Tengwar dictionary and transcriber",
+  "description": "Tengwar dictionary",
   "image": "heroku/nodejs"
 }

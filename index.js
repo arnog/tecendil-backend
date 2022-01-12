@@ -126,14 +126,14 @@ function eachWord(w, q) {
     if (score > 0) {
       let v = w.attr.v;
       if (v && w.attr.tengwar) {
-        // The tengwar attribute contains a thorn or tilde-n to indicate that
-        // súlë or noldo should be used instead of s/n
+        // The `tengwar` attribute contains a thorn or tilde-n to indicate that
+        // súlë or noldo should be used instead of s/n in initial position
         if (w.attr.tengwar === "ñ") {
-          v = v.replace("n", "ñ");
-          v = v.replace("N", "Ñ");
+          if (v[0] === "n") v = "ñ" + v.substring(1);
+          else if (v[0] === "N") v = "Ñ" + v.substring(1);
         } else if (w.attr.tengwar === "þ") {
-          v = v.replace("s", "þ");
-          v = v.replace("S", "Þ");
+          if (v[0] === "s") v = "þ" + v.substring(1);
+          else if (v[0] === "S") v = "Þ" + v.substring(1);
         }
       }
       const notes = w.childNamed("notes");
@@ -301,7 +301,7 @@ fs.readFile(__dirname + "/eldamo-data.xml", "utf8", (err, data) => {
 });
 
 // Startup the app
-app.set("port", process.env.PORT || 5000);
+app.set("port", process.env.PORT ?? 39999);
 
 // Search route
 app.get("/define/:word", (req, res) => {

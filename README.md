@@ -14,19 +14,25 @@ Returns a JSON record containing an array of entries matching the specified word
 
 ## Running Locally
 
-Make sure you have [Node.js](http://nodejs.org/) and the [Heroku Toolbelt](https://toolbelt.heroku.com/) installed.
+Install:
+
+- [Node.js](http://nodejs.org/)
+- [Heroku Toolbelt](https://toolbelt.heroku.com/)
 
 ```sh
 # $ git clone git@github.com:heroku/node-js-getting-started.git
 # or clone your own fork
-cd tengwar
+cd tecendil-backend
 npm install
 npm start
 ```
 
-The app should now be running on [localhost:5000](http://localhost:5000/).
+The app should now be running on [localhost:39999](http://localhost:39999/).
 
-Try `http://localhost:5000/define/gandalf`.
+Try
+
+- `http://localhost:39999/define/gandalf`
+- `http://localhost:39999/define/nolofinwe`
 
 ## Deploying to Heroku
 
