@@ -140,7 +140,8 @@ function computeScore(node, q) {
       // The whole word matched.
       // Check if this is a perfect match for the lemma or the gloss.
       if (asciiFolder.fold(node.v).toLowerCase() === q) return 100;
-      if (asciiFolder.fold(node.gloss).toLowerCase() === q) return 100;
+      if (node.gloss && asciiFolder.fold(node.gloss).toLowerCase() === q)
+        return 100;
     }
   }
 
