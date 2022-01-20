@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "NODE_ENV=development node index.js"
   },
   "dependencies": {
     "express": "^4.17.1",
     "xmldoc": "^1.1.2"
   },
   "engines": {
-    "node": ">=14.15.1"
+    "node": ">=16.0.0"
   }
 }

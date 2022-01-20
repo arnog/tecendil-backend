@@ -2,8 +2,6 @@
 
 The backend component of Tecendil which provides dictionary definitions.
 
-[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy)
-
 ## API
 
 ```
@@ -20,24 +18,22 @@ Install:
 - [Heroku Toolbelt](https://toolbelt.heroku.com/)
 
 ```sh
-# $ git clone git@github.com:heroku/node-js-getting-started.git
-# or clone your own fork
 cd tecendil-backend
 npm install
 npm start
 ```
 
-The app should now be running on [localhost:39999](http://localhost:39999/).
+The app is running at [localhost:39999](http://localhost:39999/).
 
 Try
 
 - `http://localhost:39999/define/gandalf`
 - `http://localhost:39999/define/nolofinwe`
 
-## Deploying to Heroku
+## Deploying
 
-```sh
-$ heroku create
-$ git push heroku master
-$ heroku open
-```
+Deployment to Heroku is done automatically on push to master.
+
+For manual deployment:
+
+[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy)
