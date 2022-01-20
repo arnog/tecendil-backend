@@ -80,7 +80,7 @@ function matchQuery(q) {
         ...entry,
         score,
         elements: entry.elements.map((v) => {
-          return { v, gloss: gShortDefinitions.get(q) ?? "" };
+          return { v, gloss: gShortDefinitions.get(v) ?? "" };
         }),
       });
     }
@@ -287,22 +287,6 @@ function correctTengwar(node) {
 /**
  * Turn the eldamo XML dictionary into an array of entries
  */
-function compileDictionary(eldamoRoot) {
-  const result = compileDictionaryRecursive(eldamoRoot);
-  for (const entry of result) {
-    if (entry.gloss && entry.gloss !== "[unglossed]") {
-      if (!gShortDefinitions.has(entry.v)) {
-        gShortDefinitions.set(entry.v, entry.gloss);
-      } else {
-        const def = gShortDefinitions.get(entry.v);
-        if (def !== entry.gloss) {
-          gShortDefinitions.set(entry.v, def + " / " + entry.gloss);
-        }
-      }
-    }
-  }
-  return result;
-}
 
 function compileDictionaryRecursive(node) {
   let result = [];
@@ -355,17 +339,21 @@ function loadDictionary() {
   try {
     console.time("Load dictionary");
     try {
+      // Read saved JSON  file
       result = JSON.parse(
         fs.readFileSync(__dirname + "/eldamo-data.json", {
           encoding: "utf8",
         })
       );
     } catch (err) {
+      // Read and  compile XML file
       const data = fs.readFileSync(__dirname + "/eldamo-data.xml", {
         encoding: "utf8",
       });
 
-      result = compileDictionary(new xmlDoc(data));
+      result = compileDictionaryRecursive(new xmlDoc(data));
+
+      // Save JSON file
       fs.writeFile(
         __dirname + "/eldamo-data.json",
         JSON.stringify(result),
@@ -377,6 +365,21 @@ function loadDictionary() {
         }
       );
     }
+
+    // Update short definitions
+    for (const entry of result) {
+      if (entry.gloss && entry.gloss !== "[unglossed]") {
+        if (!gShortDefinitions.has(entry.v)) {
+          gShortDefinitions.set(entry.v, entry.gloss);
+        } else {
+          const def = gShortDefinitions.get(entry.v);
+          if (def !== entry.gloss) {
+            gShortDefinitions.set(entry.v, def + " / " + entry.gloss);
+          }
+        }
+      }
+    }
+
     console.timeEnd("Load dictionary");
 
     console.log("Ready");
