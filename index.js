@@ -9,6 +9,8 @@ const xmlDoc = require("xmldoc").XmlDocument;
 const ASCIIFolder = require("./ascii-folder");
 const asciiFolder = new ASCIIFolder();
 
+// Ignore the following words when building the index from the lemma (v)
+// and the gloss (definition)
 const STOP_WORDS = [
   "?",
   "[]",
@@ -60,10 +62,15 @@ const STOP_WORDS = [
   "...",
 ];
 
-const gShortDefCache = new Map();
+const gShortDefinitions = new Map();
 
 const gEldamoDictionary = loadDictionary();
 
+/**
+ * Give a query string, return an array of entries that match.
+ * Each entry includes a score property from 1-100 indicating how
+ * closely it matches the query. The entries are in no particular order.
+ */
 function matchQuery(q) {
   let result = [];
   for (const entry of gEldamoDictionary) {
@@ -73,7 +80,7 @@ function matchQuery(q) {
         ...entry,
         score,
         elements: entry.elements.map((v) => {
-          return { v, gloss: getShortDefinition(v) };
+          return { v, gloss: gShortDefinitions.get(q) ?? "" };
         }),
       });
     }
@@ -129,15 +136,20 @@ function computeScore(node, q) {
   let score = 0;
   for (const word of node.index) {
     score = Math.max(score, computeWordScore(word, q));
-    if (score >= 100) return 100;
+    if (score === 99) {
+      // The whole word matched.
+      // Check if this is a perfect match for the lemma or the gloss.
+      if (asciiFolder.fold(node.v).toLowerCase() === q) return 100;
+      if (asciiFolder.fold(node.gloss).toLowerCase() === q) return 100;
+    }
   }
 
   return Math.round(score);
 }
 
 function computeWordScore(word, q) {
-  if (word === q) return 100;
-  if (word.startsWith(q)) return (100 * q.length) / word.length;
+  if (word === q) return 99;
+  if (word.startsWith(q)) return (98 * q.length) / word.length;
   if (word.indexOf(q) >= 0) return (70 * q.length) / word.length;
 
   return 0;
@@ -187,7 +199,7 @@ app.get("/define/:word", (req, res) => {
 });
 
 app.use((_req, res, _next) => {
-  res.status(404).send("Unknown route. :( Use /define/:word");
+  res.status(404).send("Unknown route. Use /define/:word");
 });
 
 app.listen(app.get("port"), () => {
@@ -199,28 +211,19 @@ app.listen(app.get("port"), () => {
 });
 
 /**
- * Return a short-definition (gloss) for a term (lemma)
- * @param {string} q
- * @return {string}
+ * Return an array of strings representing terms to index this entry with.
+ * The index is composed of the lemma (v) and the gloss (definition) for the
+ * entry.
  */
-
-function getShortDefinition(q) {
-  if (q === "?") return "";
-
-  if (gShortDefCache.has(q)) return gShortDefCache.get(q);
-
-  gShortDefCache.set(q, "");
-  return "";
-}
-
 function computeIndex(node) {
   const index = [];
 
-  // The index includes an ascii and case folded version of the lemma (v)
+  // The index includes an ascii and case folded version of the words of the
+  // lemma (v)
   const v = asciiFolder.fold(node.attr.v).toLowerCase().split(" ");
   for (const word of v) if (word) index.push(word);
 
-  // ...and the words from gloss (definition)
+  // ...and the words from the gloss (definition)
   // (ngloss is the gloss including neo- definitions, use it
   // if present)
   const phrases = asciiFolder
@@ -246,10 +249,15 @@ function computeIndex(node) {
   return index;
 }
 
+/**
+ * Return the lemma for the node, with any necessary tengwar correction
+ * applied (i.e. initial noldo, suule, etc...)
+ */
 function correctTengwar(node) {
   let v = node.attr.v;
   const tengwar = node.attr.tengwar;
   if (!v || !tengwar) return v;
+
   // The `tengwar` attribute contains a hint for the tengwar spelling
   // of some words.
   // This is useful for words that begin with "n" (some of which should
@@ -261,6 +269,7 @@ function correctTengwar(node) {
     if (v[0] === "n") v = "ñ" + v.substring(1);
     else if (v[0] === "N") v = "Ñ" + v.substring(1);
   } else if (tengwar === "þ" || tengwar === "þ-") {
+    // Firs "s" in word is assumed to be the one the tengwar correction applies to
     const index = v.toLowerCase().indexOf("s");
     if (index >= 0) {
       v =
@@ -268,6 +277,8 @@ function correctTengwar(node) {
         (v[index] === "S" ? "Þ" : "þ") +
         v.substr(index + 1);
     }
+  } else if (tengwar === "ñorþus") {
+    v = "Ñorþus";
   }
 
   return v;
@@ -280,12 +291,12 @@ function compileDictionary(eldamoRoot) {
   const result = compileDictionaryRecursive(eldamoRoot);
   for (const entry of result) {
     if (entry.gloss && entry.gloss !== "[unglossed]") {
-      if (!gShortDefCache.has(entry.v)) {
-        gShortDefCache.set(entry.v, entry.gloss);
+      if (!gShortDefinitions.has(entry.v)) {
+        gShortDefinitions.set(entry.v, entry.gloss);
       } else {
-        const def = gShortDefCache.get(entry.v);
+        const def = gShortDefinitions.get(entry.v);
         if (def !== entry.gloss) {
-          gShortDefCache.set(entry.v, def + " / " + entry.gloss);
+          gShortDefinitions.set(entry.v, def + " / " + entry.gloss);
         }
       }
     }
@@ -317,7 +328,7 @@ function compileDictionaryRecursive(node) {
           index: computeIndex(node),
           language: node.attr.l,
           pos,
-          gloss: node.attr.gloss,
+          gloss: node.attr.ngloss ?? node.attr.gloss,
           stem: node.attr.stem,
           notes: notes ? notes.val : undefined,
           tengwar: node.attr.tengwar,
@@ -333,15 +344,39 @@ function compileDictionaryRecursive(node) {
   return result;
 }
 
+/**
+ * Read the dictionary as a JSON file, if available.
+ * If the JSON file is not present, create it from the XML file,
+ * then write it to disk.
+ * When updating eldamo, simply delete the JSON file, and run once
+ */
 function loadDictionary() {
   let result = undefined;
   try {
     console.time("Load dictionary");
-    const data = fs.readFileSync(__dirname + "/eldamo-data.xml", {
-      encoding: "utf8",
-    });
+    try {
+      result = JSON.parse(
+        fs.readFileSync(__dirname + "/eldamo-data.json", {
+          encoding: "utf8",
+        })
+      );
+    } catch (err) {
+      const data = fs.readFileSync(__dirname + "/eldamo-data.xml", {
+        encoding: "utf8",
+      });
 
-    result = compileDictionary(new xmlDoc(data));
+      result = compileDictionary(new xmlDoc(data));
+      fs.writeFile(
+        __dirname + "/eldamo-data.json",
+        JSON.stringify(result),
+        {
+          encoding: "utf8",
+        },
+        (status) => {
+          if (status) console.log("Error writing dictionary", status);
+        }
+      );
+    }
     console.timeEnd("Load dictionary");
 
     console.log("Ready");
