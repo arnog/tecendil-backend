@@ -1,1 +1,1 @@
-web: node index.js
+web: node --max_old_space_size=460 index.js
