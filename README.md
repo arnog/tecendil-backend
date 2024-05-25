@@ -30,6 +30,12 @@ Try
 - `http://localhost:39999/define/gandalf`
 - `http://localhost:39999/define/nolofinwe`
 
+## Updating Eldamo
+
+- Delete the json file
+- Update the XML file from https://github.com/pfstrack/eldamo/tree/master/src/data
+- `npm start` to regenerate the JSON file
+
 ## Deploying
 
 Deployment to Heroku is done automatically on push to master.
